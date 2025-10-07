@@ -1,55 +1,61 @@
 %define _epel   %{?epel:%{epel}}%{!?epel:0}
 
-Name:		fasttext
-Version:	0.9.2
-Release:	2%{?dist}
-Summary:	Efficient learning of word representations and sentence classification
+Name:       fasttext
+Version:    0.9.2
+Release:    2%{?dist}
+Summary:    Efficient learning of word representations and sentence classification
 
-License:	MIT
-URL:		https://github.com/facebookresearch/fastText
-Source0:	https://github.com/facebookresearch/fastText/archive/v%{version}/%{name}-%{version}.tar.gz
+License:    MIT
+URL:        https://github.com/facebookresearch/fastText
+Source0:    https://github.com/facebookresearch/fastText/archive/v%{version}/%{name}-%{version}.tar.gz
+Source1:    https://fasttext.cc/docs/en/language-identification.html
+Source2:    https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
 # Enable to install %%{_libdir} instead of hardcoded lib directory
-Patch0:		enable-install-lib64.patch
+Patch0:     enable-install-lib64.patch
 # Respect CMake CXXFLAGS set by %%cmake (Needed for hardening with -fPIC)
-Patch1:		respect-cmake-cxxflags.patch
-Patch2:		uint64_t-and-sign.patch
+Patch1:     respect-cmake-cxxflags.patch
+Patch2:     uint64_t-and-sign.patch
 
-BuildRequires:	cmake
+BuildRequires:    cmake
 %if %{_epel} == 7
-BuildRequires:	devtoolset-7-gcc
-BuildRequires:	devtoolset-7-gcc-c++
+BuildRequires:    devtoolset-7-gcc
+BuildRequires:    devtoolset-7-gcc-c++
 %else
-BuildRequires:	gcc
-BuildRequires:	gcc-c++
+BuildRequires:    gcc
+BuildRequires:    gcc-c++
 %endif
-Requires:	%{name}-libs = %{version}-%{release}
+Requires:   %{name}-libs = %{version}-%{release}
 
 %description
 The fastText is a library for efficient learning of
 word representations and sentence classification.
 
 %package libs
-Summary:	Runtime libraries for fastText
+Summary:    Runtime libraries for fastText
 
 %description libs
 This package contains the libraries for fastText.
 
-%package tools
-Summary:	Tools for fastText
-Requires:	%{name}-libs = %{version}-%{release}
+%package data
+Summary:    Language model lid.176.bin from fasttext.cc
+Requires:   %{name} = %{version}-%{release}
+License:    CC-BY-SA-3.0
+BuildArch:  noarch
 
-%description tools
-This package contains tools for manipulate models for fastText.
+%description data
+Contains a Language model, lid.176.bin, which is faster and slightly more
+accurate, but has a file size of 126MB.
 
 %package devel
-Summary:	Libraries and header files for fastText
-Requires:	%{name}-libs = %{version}-%{release}
+Summary:    Libraries and header files for fastText
+Requires:    %{name}-libs = %{version}-%{release}
 
 %description devel
 This package contains header files to develop a software using fastText.
 
 %prep
 %autosetup -p1 -n fastText-%{version}
+cp -p %{SOURCE1} .
 
 %build
 %if %{_epel} == 7
@@ -63,6 +69,9 @@ V=1 %cmake_build
 %cmake_install
 find %{buildroot}%{_libdir} -name '*.a' -delete
 
+mkdir -p %{buildroot}/%{_datadir}/%{name}/
+cp %{SOURCE2} %{buildroot}/%{_datadir}/%{name}/
+
 %files
 %{_bindir}/fasttext
 
@@ -73,14 +82,19 @@ find %{buildroot}%{_libdir} -name '*.a' -delete
 %doc CODE_OF_CONDUCT.md CONTRIBUTING.md README.md
 %{_libdir}/libfasttext.so.0
 
+%files data
+%doc   language-identification.html
+%{_datadir}/%{name}
+
 %files devel
-%{_includedir}/fasttext/
+%{_includedir}/%{name}/
 %{_libdir}/libfasttext.so
 %{_libdir}/pkgconfig/fasttext.pc
 
 %changelog
 * Tue Oct 07 2025 Ding-Yi Chen <dingyichen@gmail.com> - 0.9.2-2
 - Fix the build errors around uint64_t not defined.
+- Include a prebuilt model.
 
 * Thu Oct 01 2020 Kentaro Hayashi <kenhys@gmail.com> - 0.9.2-1
 - New upstream release
